@@ -90,6 +90,8 @@ public class RaycastingUsingDDATest extends JPanel
         repaint();
     }
     
+    private static final double DIV_BY_ZERO_REPLACE = 0.000000001;
+    
     // refs.: javidx9 - https://www.youtube.com/watch?v=NbSee-XM7WA&t=815s
     //        https://lodev.org/cgtutor/raycasting.html
     //
@@ -102,39 +104,41 @@ public class RaycastingUsingDDATest extends JPanel
 
         double dy = dst.y - src.y;
         double dx = dst.x - src.x;
-        int dySign = (int) Math.signum(dy);
+        dx = dx == 0 ? DIV_BY_ZERO_REPLACE : dx;
+        dy = dy == 0 ? DIV_BY_ZERO_REPLACE : dy;
+        double distInv = 1.0 / Math.hypot(dx, dy);
+        dx *= distInv;
+        dy *= distInv;
         int dxSign = (int) Math.signum(dx);
-        double yStep = dySign * Math.abs(dy / dx);
-        double xStep = dxSign * Math.abs(dx / dy);
+        int dySign = (int) Math.signum(dy);
         rayCell.setLocation((int) src.x, (int) src.y);
         double startDy = rayCell.y + dySign * 0.5 + 0.5 - src.y;
         double startDx = rayCell.x + dxSign * 0.5 + 0.5 - src.x;
-        double totalDistDx = Math.hypot(startDy * xStep, startDy);
-        double totalDistDy = Math.hypot(startDx * yStep, startDx);
-        double distDx = Math.hypot(dxSign, yStep);
-        double distDy = Math.hypot(dySign, xStep);
+        double distDx = Math.abs(1 / dx);
+        double distDy = Math.abs(1 / dy);
+        double totalDistDx = distDx * dxSign * startDx;
+        double totalDistDy = distDy * dySign * startDy;
         double intersectionDistance = 0;
         int side = 0;
         while (intersectionDistance < maxRayDistance) {
-            if (totalDistDy < totalDistDx) {
+            if (totalDistDx < totalDistDy) {
                 rayCell.x += dxSign;
-                intersectionDistance = totalDistDy;
-                totalDistDy += distDx;
+                intersectionDistance = totalDistDx;
+                totalDistDx += distDx;
                 side = 2;
             }
             else {
                 rayCell.y += dySign;
-                intersectionDistance = totalDistDx;
-                totalDistDx += distDy;
+                intersectionDistance = totalDistDy;
+                totalDistDy += distDy;
                 side = 1;
             }
             if (rayCell.x < 0 || rayCell.x >= mapCols
                     || rayCell.y < 0 || rayCell.y >= mapRows) break;
 
             if (map[rayCell.y][rayCell.x] == 1) {
-                double distInv = 1.0 / Math.hypot(dx, dy);
-                double ipx = src.x + intersectionDistance * dx * distInv;
-                double ipy = src.y + intersectionDistance * dy * distInv;
+                double ipx = src.x + intersectionDistance * dx;
+                double ipy = src.y + intersectionDistance * dy;
                 intersectionPoint.setLocation(ipx, ipy);
                 return side;
             }
